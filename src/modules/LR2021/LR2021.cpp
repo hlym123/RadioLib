@@ -685,6 +685,11 @@ int16_t LR2021::config(uint8_t modem) {
   state = this->clearIrqState(RADIOLIB_LR2021_IRQ_ALL);
   RADIOLIB_ASSERT(state);
 
+  // Regulator / ramp resolution (datasheet SetRegMode); avoids relying on reset defaults.
+  const uint8_t rampTimes[4] = { 0x00, 0x00, 0x00, 0x00 };
+  state = this->setRegMode((uint8_t)(RADIOLIB_LR2021_REG_MODE_SIMO_NORMAL | RADIOLIB_LR2021_REG_MODE_RAMP_RES_4_US), rampTimes);
+  RADIOLIB_ASSERT(state);
+
   // validate DIO pin number
   if((this->irqDioNum < 5) || (this->irqDioNum > 11)) {
     return(RADIOLIB_ERR_INVALID_DIO_PIN);

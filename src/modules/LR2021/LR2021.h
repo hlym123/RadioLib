@@ -793,6 +793,8 @@ class LR2021: public LRxxxx {
     int16_t selPa(uint8_t pa);
     int16_t setPaConfig(uint8_t pa, uint8_t paLfMode, uint8_t paLfDutyCycle, uint8_t paLfSlices, uint8_t paHfDutyCycle);
     int16_t setTxParams(int8_t txPower, uint8_t rampTime);
+    /*! \brief SetTxParams first byte as signed half-dBm steps (datasheet / lr20xx `power_half_dbm`). */
+    int16_t setTxParamsHalfDbm(int8_t powerHalfDbm, uint8_t rampTime);
 
     // modem configuration commands
     int16_t setPacketType(uint8_t packetType);
