@@ -160,6 +160,11 @@ int16_t LR2021::setFrequency(float freq, bool skipCalibration) {
   RADIOLIB_ASSERT(state);
   this->freqMHz = freq;
   this->highFreq = (freq > RADIOLIB_LR2021_LF_CUTOFF_FREQ);
+  // Match RX path to LF/HF after a band change. Without this, HF PA/TX commands can fail with
+  // RADIOLIB_ERR_SPI_CMD_INVALID (-706) while the chip is still on the LF path from prior RX.
+  state = this->setRxPath(this->highFreq ? RADIOLIB_LR2021_RX_PATH_HF : RADIOLIB_LR2021_RX_PATH_LF,
+                          this->highFreq ? this->gainModeHf : this->gainModeLf);
+  RADIOLIB_ASSERT(state);
   return(state);
 }
 
@@ -284,7 +289,7 @@ void LR2021::setRfSwitchTable(const uint32_t (&pins)[Module::RFSWITCH_MAX_PINS],
     uint8_t pull = dioNum == 0 ? RADIOLIB_LR2021_DIO_SLEEP_PULL_UP : RADIOLIB_LR2021_DIO_SLEEP_PULL_AUTO;
     // enable RF control for this pin and set the modes in which it is active
     (void)this->setDioFunction(dioNum + 5, RADIOLIB_LR2021_DIO_FUNCTION_RF_SWITCH, pull);
-    (void)this->setDioRfSwitchConfig(dioNum + 5, dioConfigs[i]);
+    (void)this->setDioRfSwitchConfig(dioNum + 5, dioConfigs[dioNum]);
   }
 }
 
