@@ -12,7 +12,7 @@
 #define RADIOLIB_LR2021_MAX_CAL_ATTEMPTS    (10)
 
 // Sub-GHz: below this RF frequency (MHz) use Table 7-17 (490 MHz ref.); at/above use Table 7-16 (915 MHz ref.).
-#define RADIOLIB_LR2021_LF_PA_TABLE_490_MHZ_MAX    (700.0f)
+#define RADIOLIB_LR2021_LF_PA_TABLE_490_MHZ_MAX    (600.0f)
 
 // Table 7-16: Optimal Values for 915 MHz Semtech Reference Design (LF PA).
 // Integer targeted dBm 22..10 only: half-dBm rows (e.g. 21.5) need a future API that passes 0.5 dB steps.
@@ -47,29 +47,31 @@ static void lr2021Table716LfRow(int8_t targetedDbm, int8_t* txHalfDbm, uint8_t* 
   *slices = e.paLfSlices;
 }
 
-// Table 7-17: Optimal Values for 490 MHz Semtech Reference Design (LF PA). Integer targeted dBm 20..10.
+// Table 7-17: Optimal Values for 490 MHz Semtech Reference Design (LF PA). Integer targeted dBm 21..10.
+// Rows not present in the datasheet are interpolated from neighbouring reference rows.
 static const struct {
   int8_t txHalfDbm;
   uint8_t paLfDutyCycle;
   uint8_t paLfSlices;
 } RADIOLIB_LR2021_TABLE_7_17_490_LF[] = {
-  /* 20 */ { 40, 7, 7 },
-  /* 19 */ { 38, 7, 7 },
-  /* 18 */ { 36, 7, 6 },
-  /* 17 */ { 34, 7, 6 },
-  /* 16 */ { 32, 7, 6 },
-  /* 15 */ { 31, 7, 4 },
-  /* 14 */ { 31, 6, 4 },
-  /* 13 */ { 29, 7, 2 },
-  /* 12 */ { 30, 5, 3 },
-  /* 11 */ { 29, 5, 2 },
-  /* 10 */ { 31, 4, 2 },
+  /* 21 */ { 44, 7, 7 },
+  /* 20 */ { 42, 7, 7 },
+  /* 19 */ { 39, 7, 7 },
+  /* 18 */ { 37, 7, 7 },
+  /* 17 */ { 35, 7, 7 },
+  /* 16 */ { 33, 7, 7 },
+  /* 15 */ { 32, 7, 5 },
+  /* 14 */ { 31, 7, 3 },
+  /* 13 */ { 30, 7, 2 },
+  /* 12 */ { 30, 6, 2 },
+  /* 11 */ { 30, 5, 2 },
+  /* 10 */ { 30, 5, 1 },
 };
 
 static void lr2021Table717LfRow(int8_t targetedDbm, int8_t* txHalfDbm, uint8_t* duty, uint8_t* slices) {
   if(targetedDbm < 10) { targetedDbm = 10; }
-  if(targetedDbm > 20) { targetedDbm = 20; }
-  const auto& e = RADIOLIB_LR2021_TABLE_7_17_490_LF[20 - targetedDbm];
+  if(targetedDbm > 21) { targetedDbm = 21; }
+  const auto& e = RADIOLIB_LR2021_TABLE_7_17_490_LF[21 - targetedDbm];
   *txHalfDbm = e.txHalfDbm;
   *duty = e.paLfDutyCycle;
   *slices = e.paLfSlices;
@@ -197,9 +199,9 @@ int16_t LR2021::setOutputPower(int8_t power, uint32_t rampTimeUs) {
       hfTxHalfDbm = (int8_t)(power * 2);
     }
   } else if(this->freqMHz < RADIOLIB_LR2021_LF_PA_TABLE_490_MHZ_MAX) {
-    // LF PA: Table 7-17 (490 MHz ref.), max +20 dBm in table; 21–22 use row 20 PA + requested TX half-dBm.
-    if(power > 20) {
-      lr2021Table717LfRow(20, &lfTxHalfDbm, &paLfDutyCycle, &paLfSlices);
+    // LF PA: Table 7-17 (490 MHz ref.); 22 dBm uses max PA row plus requested TX half-dBm.
+    if(power > 21) {
+      lr2021Table717LfRow(21, &lfTxHalfDbm, &paLfDutyCycle, &paLfSlices);
       lfTxHalfDbm = (int8_t)(power * 2);
     } else if(power >= 10) {
       lr2021Table717LfRow(power, &lfTxHalfDbm, &paLfDutyCycle, &paLfSlices);
