@@ -866,13 +866,20 @@ int16_t LR2021::stageMode(RadioModeType_t mode, RadioModeConfig_t* cfg) {
       state = setDioIrqConfig(this->irqDioNum, getIrqMapped(cfg->receive.irqFlags & cfg->receive.irqMask));
       RADIOLIB_ASSERT(state);
 
+      // Discard bytes left by an aborted or rejected packet before a new RX.
+      state = clearRxFifo();
+      RADIOLIB_ASSERT(state);
+
       // clear interrupt flags
       state = clearIrqState(RADIOLIB_LR2021_IRQ_ALL);
       RADIOLIB_ASSERT(state);
 
-      // set implicit mode and expected len if applicable
-      if((this->headerType == RADIOLIB_LR2021_LORA_HEADER_IMPLICIT) && (modem == RADIOLIB_LR2021_PACKET_TYPE_LORA)) {
-        state = setLoRaPacketParams(this->preambleLengthLoRa, this->headerType, this->implicitLen, this->crcTypeLoRa, this->invertIQEnabled);
+      // TX overwrites payload_len; in explicit RX it is an upper length filter.
+      // Restore the RX limit so a short TX does not reject longer incoming packets.
+      if(modem == RADIOLIB_LR2021_PACKET_TYPE_LORA) {
+        const uint8_t rxLen = (this->headerType == RADIOLIB_LR2021_LORA_HEADER_IMPLICIT)
+          ? this->implicitLen : RADIOLIB_LR2021_MAX_PACKET_LENGTH;
+        state = setLoRaPacketParams(this->preambleLengthLoRa, this->headerType, rxLen, this->crcTypeLoRa, this->invertIQEnabled);
         RADIOLIB_ASSERT(state);
       }
 
@@ -925,6 +932,10 @@ int16_t LR2021::stageMode(RadioModeType_t mode, RadioModeConfig_t* cfg) {
         RADIOLIB_ASSERT(state);
 
       } else {
+        // An interrupted TX may leave bytes queued ahead of the next payload.
+        state = clearTxFifo();
+        RADIOLIB_ASSERT(state);
+
         // write packet to buffer
         state = writeRadioTxFifo(cfg->transmit.data, cfg->transmit.len);
         RADIOLIB_ASSERT(state);
